@@ -1,11 +1,24 @@
 "use client"
 
+import type React from "react"
+
 import { useEffect, useRef, useState, Suspense } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import { Float, Environment, Html } from "@react-three/drei"
 import { motion } from "framer-motion"
 import * as THREE from "three"
-import { Moon, Sun, Volume2, VolumeX } from "lucide-react"
+import {
+  Moon,
+  Sun,
+  Volume2,
+  VolumeX,
+  AlertCircle,
+  HelpCircle,
+  EyeOff,
+  Activity,
+  FastForward,
+  Shuffle,
+} from "lucide-react"
 import { useTheme } from "next-themes"
 
 // Smooth interpolation utility
@@ -96,12 +109,12 @@ class AmbientAudio {
         filter.Q.setValueAtTime(1, this.audioContext!.currentTime)
 
         gainNode.gain.setValueAtTime(0, this.audioContext!.currentTime)
-        gainNode.gain.linearRampToValueAtTime(0.15, this.audioContext!.currentTime + 0.2)
-        gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext!.currentTime + 3)
+        gainNode.gain.linearRampToValueAtTime(0.15, this.audioContext!.currentTime + 0.4) // Slower fade in
+        gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext!.currentTime + 4) // Slower fade out
 
         oscillator.start(this.audioContext!.currentTime)
-        oscillator.stop(this.audioContext!.currentTime + 3)
-      }, index * 150)
+        oscillator.stop(this.audioContext!.currentTime + 4)
+      }, index * 200) // Slower chime interval
     })
   }
 
@@ -130,7 +143,7 @@ class AmbientAudio {
 
       const volume = 0.03 / (index + 1)
       gainNode.gain.setValueAtTime(0, this.audioContext!.currentTime)
-      gainNode.gain.linearRampToValueAtTime(volume, this.audioContext!.currentTime + 2)
+      gainNode.gain.linearRampToValueAtTime(volume, this.audioContext!.currentTime + 3) // Slower fade in
 
       oscillator.start()
 
@@ -152,16 +165,18 @@ class AmbientAudio {
   }
 }
 
-// Enhanced floating thought with smoother animations
+// Enhanced floating thought with smoother animations and icons
 function FloatingThought({
   position,
   text,
+  icon: Icon,
   color,
   onInteract,
   theme,
 }: {
   position: [number, number, number]
   text: string
+  icon: React.ElementType
   color: string
   onInteract: () => void
   theme: string
@@ -175,17 +190,17 @@ function FloatingThought({
 
   useFrame((state, delta) => {
     if (meshRef.current && !clicked) {
-      // Smooth floating motion
-      const floatY = Math.sin(state.clock.elapsedTime * 0.5 + floatOffset.current) * 0.3
+      // Smooth floating motion (slower)
+      const floatY = Math.sin(state.clock.elapsedTime * 0.3 + floatOffset.current) * 0.4 // Slower speed, slightly larger range
       meshRef.current.position.y = position[1] + floatY
 
-      // Smooth rotation
-      meshRef.current.rotation.y += delta * 0.2
-      meshRef.current.rotation.x += delta * 0.1
+      // Smooth rotation (slower)
+      meshRef.current.rotation.y += delta * 0.1
+      meshRef.current.rotation.x += delta * 0.05
 
-      // Smooth scale interpolation
+      // Smooth scale interpolation (slower response)
       targetScale.current = hovered ? 1.3 : 1
-      currentScale.current = lerp(currentScale.current, targetScale.current, delta * 8)
+      currentScale.current = lerp(currentScale.current, targetScale.current, delta * 6) // Slower lerp factor
       meshRef.current.scale.setScalar(currentScale.current)
     }
   })
@@ -195,18 +210,18 @@ function FloatingThought({
     setClicked(true)
     onInteract()
 
-    // Smooth dissolution animation
+    // Smooth dissolution animation (slower)
     if (meshRef.current) {
       const mesh = meshRef.current
       const startY = mesh.position.y
       const startScale = mesh.scale.x
 
       const animate = () => {
-        mesh.position.y += 0.02
-        mesh.scale.multiplyScalar(0.99)
-        mesh.rotation.y += 0.05
+        mesh.position.y += 0.015 // Slower float away
+        mesh.scale.multiplyScalar(0.995) // Slower shrink
+        mesh.rotation.y += 0.03 // Slower rotation
 
-        if (mesh.position.y < startY + 5 && mesh.scale.x > 0.1) {
+        if (mesh.position.y < startY + 5 && mesh.scale.x > 0.05) {
           requestAnimationFrame(animate)
         }
       }
@@ -217,7 +232,9 @@ function FloatingThought({
   const palette = colorPalettes[theme as keyof typeof colorPalettes]
 
   return (
-    <Float speed={0.8} rotationIntensity={0.1} floatIntensity={0.3}>
+    <Float speed={0.6} rotationIntensity={0.08} floatIntensity={0.4}>
+      {" "}
+      {/* Slower float speed */}
       <mesh
         ref={meshRef}
         position={position}
@@ -238,8 +255,9 @@ function FloatingThought({
           ior={1.4}
         />
         <Html distanceFactor={8} position={[0, 0, 0]}>
-          <div className="text-white dark:text-gray-200 text-xs font-light text-center pointer-events-none px-2 py-1 rounded-full bg-black/20 dark:bg-white/10 backdrop-blur-sm">
-            {text}
+          <div className="flex items-center space-x-1 text-white dark:text-gray-200 text-xs font-light text-center pointer-events-none px-2 py-1 rounded-full bg-black/20 dark:bg-white/10 backdrop-blur-sm">
+            <Icon className="w-3 h-3" />
+            <span>{text}</span>
           </div>
         </Html>
       </mesh>
@@ -269,20 +287,20 @@ function MindLayer({
 
   useFrame((state, delta) => {
     if (meshRef.current) {
-      // Smooth rotation
-      meshRef.current.rotation.y += rotation * delta * 60
-      meshRef.current.rotation.x += rotation * 0.5 * delta * 60
+      // Smooth rotation (slower)
+      meshRef.current.rotation.y += rotation * delta * 40 // Reduced multiplier
+      meshRef.current.rotation.x += rotation * 0.5 * delta * 40 // Reduced multiplier
 
-      // Smooth opacity transition
+      // Smooth opacity transition (slower)
       targetOpacity.current = opacity * (1 - crackProgress * 0.8)
-      currentOpacity.current = lerp(currentOpacity.current, targetOpacity.current, delta * 4)
+      currentOpacity.current = lerp(currentOpacity.current, targetOpacity.current, delta * 3) // Slower lerp factor
 
       if (meshRef.current.material) {
         ;(meshRef.current.material as THREE.MeshPhysicalMaterial).opacity = currentOpacity.current
       }
 
-      // Smooth scale based on crack progress
-      const scale = 1 + crackProgress * 0.2
+      // Smooth scale based on crack progress (slower)
+      const scale = 1 + crackProgress * 0.15 // Reduced scale expansion
       meshRef.current.scale.setScalar(scale)
     }
   })
@@ -321,29 +339,29 @@ function MindOrbScene({ scrollProgress, theme }: { scrollProgress: number; theme
 
   useFrame((state, delta) => {
     if (camera) {
-      // Smooth camera movement
-      targetCameraZ.current = 8 - scrollProgress * 4
-      targetCameraY.current = scrollProgress * 1.5
+      // Smooth camera movement (slower)
+      targetCameraZ.current = 8 - scrollProgress * 3.5 // Slightly less movement
+      targetCameraY.current = scrollProgress * 1.2 // Slightly less movement
 
-      currentCameraZ.current = lerp(currentCameraZ.current, targetCameraZ.current, delta * 3)
-      currentCameraY.current = lerp(currentCameraY.current, targetCameraY.current, delta * 3)
+      currentCameraZ.current = lerp(currentCameraZ.current, targetCameraZ.current, delta * 2) // Slower lerp factor
+      currentCameraY.current = lerp(currentCameraY.current, targetCameraY.current, delta * 2) // Slower lerp factor
 
       camera.position.z = currentCameraZ.current
       camera.position.y = currentCameraY.current
       camera.lookAt(0, 0, 0)
     }
 
-    // Smooth group rotation
+    // Smooth group rotation (slower)
     if (groupRef.current) {
-      groupRef.current.rotation.y += delta * 0.1
+      groupRef.current.rotation.y += delta * 0.05 // Reduced rotation speed
     }
   })
 
   // Smooth progress calculations
-  const anxietyProgress = Math.max(0, Math.min(1, (scrollProgress - 0.15) * 4))
-  const overthinkingProgress = Math.max(0, Math.min(1, (scrollProgress - 0.35) * 4))
-  const restlessnessProgress = Math.max(0, Math.min(1, (scrollProgress - 0.55) * 4))
-  const dissolutionProgress = Math.max(0, Math.min(1, (scrollProgress - 0.75) * 4))
+  const anxietyProgress = Math.max(0, Math.min(1, (scrollProgress - 0.15) * 3)) // Slower reveal
+  const overthinkingProgress = Math.max(0, Math.min(1, (scrollProgress - 0.35) * 3)) // Slower reveal
+  const restlessnessProgress = Math.max(0, Math.min(1, (scrollProgress - 0.55) * 3)) // Slower reveal
+  const dissolutionProgress = Math.max(0, Math.min(1, (scrollProgress - 0.75) * 3)) // Slower reveal
 
   const handleThoughtInteract = (thoughtId: string) => {
     setInteractedThoughts((prev) => new Set([...prev, thoughtId]))
@@ -355,26 +373,42 @@ function MindOrbScene({ scrollProgress, theme }: { scrollProgress: number; theme
     {
       id: "worry",
       text: "Worry",
+      icon: AlertCircle,
       position: [-2.5, 1.2, 1.5] as [number, number, number],
       color: palette.thoughts.worry,
     },
     {
       id: "doubt",
       text: "Doubt",
+      icon: HelpCircle,
       position: [2.2, -1.5, 1.2] as [number, number, number],
       color: palette.thoughts.doubt,
     },
-    { id: "fear", text: "Fear", position: [-1.8, -2.2, 2.1] as [number, number, number], color: palette.thoughts.fear },
+    {
+      id: "fear",
+      text: "Fear",
+      icon: EyeOff,
+      position: [-1.8, -2.2, 2.1] as [number, number, number],
+      color: palette.thoughts.fear,
+    },
     {
       id: "stress",
       text: "Stress",
+      icon: Activity,
       position: [1.5, 2.3, -1.2] as [number, number, number],
       color: palette.thoughts.stress,
     },
-    { id: "rush", text: "Rush", position: [3.1, 0.2, 0.5] as [number, number, number], color: palette.thoughts.rush },
+    {
+      id: "rush",
+      text: "Rush",
+      icon: FastForward,
+      position: [3.1, 0.2, 0.5] as [number, number, number],
+      color: palette.thoughts.rush,
+    },
     {
       id: "chaos",
       text: "Chaos",
+      icon: Shuffle,
       position: [-3.2, 0.8, -1.1] as [number, number, number],
       color: palette.thoughts.chaos,
     },
@@ -407,7 +441,7 @@ function MindOrbScene({ scrollProgress, theme }: { scrollProgress: number; theme
           radius={1.8}
           color={palette.anxiety}
           opacity={0.4}
-          rotation={0.008}
+          rotation={0.005} // Slower rotation
           crackProgress={anxietyProgress}
           theme={theme}
         />
@@ -418,7 +452,7 @@ function MindOrbScene({ scrollProgress, theme }: { scrollProgress: number; theme
           radius={2.4}
           color={palette.overthinking}
           opacity={0.35}
-          rotation={-0.006}
+          rotation={-0.004} // Slower rotation
           crackProgress={overthinkingProgress}
           theme={theme}
         />
@@ -429,7 +463,7 @@ function MindOrbScene({ scrollProgress, theme }: { scrollProgress: number; theme
           radius={3.0}
           color={palette.restlessness}
           opacity={0.3}
-          rotation={0.01}
+          rotation={0.006} // Slower rotation
           crackProgress={restlessnessProgress}
           theme={theme}
         />
@@ -443,6 +477,7 @@ function MindOrbScene({ scrollProgress, theme }: { scrollProgress: number; theme
             key={thought.id}
             position={thought.position}
             text={thought.text}
+            icon={thought.icon}
             color={thought.color}
             onInteract={() => handleThoughtInteract(thought.id)}
             theme={theme}
@@ -452,9 +487,13 @@ function MindOrbScene({ scrollProgress, theme }: { scrollProgress: number; theme
       {/* Enhanced peaceful particles */}
       {scrollProgress > 0.75 && (
         <>
-          {Array.from({ length: 30 }).map((_, i) => (
-            <Float key={i} speed={0.3 + Math.random() * 0.4} rotationIntensity={0.05}>
-              <mesh position={[(Math.random() - 0.5) * 12, (Math.random() - 0.5) * 12, (Math.random() - 0.5) * 12]}>
+          {Array.from({ length: 40 }).map((_, i) => (
+            <Float key={i} speed={0.2 + Math.random() * 0.3} rotationIntensity={0.03}>
+              {" "}
+              {/* Slower particle float */}
+              <mesh position={[(Math.random() - 0.5) * 15, (Math.random() - 0.5) * 15, (Math.random() - 0.5) * 15]}>
+                {" "}
+                {/* Larger spread */}
                 <sphereGeometry args={[0.03 + Math.random() * 0.04, 12, 12]} />
                 <meshBasicMaterial color={palette.particles} transparent opacity={0.6 + Math.random() * 0.3} />
               </mesh>
@@ -539,7 +578,7 @@ function Controls() {
         whileTap={{ scale: 0.95 }}
         initial={{ opacity: 0, scale: 0, rotate: -180 }}
         animate={{ opacity: 1, scale: 1, rotate: 0 }}
-        transition={{ delay: 1, type: "spring", stiffness: 200, damping: 15 }}
+        transition={{ delay: 1, type: "spring", stiffness: 150, damping: 12 }}
       >
         {theme === "dark" ? <Sun className="w-6 h-6 text-amber-400" /> : <Moon className="w-6 h-6 text-indigo-600" />}
       </motion.button>
@@ -551,7 +590,7 @@ function Controls() {
         whileTap={{ scale: 0.95 }}
         initial={{ opacity: 0, scale: 0, rotate: -180 }}
         animate={{ opacity: 1, scale: 1, rotate: 0 }}
-        transition={{ delay: 1.2, type: "spring", stiffness: 200, damping: 15 }}
+        transition={{ delay: 1.2, type: "spring", stiffness: 150, damping: 12 }}
       >
         {audioEnabled ? (
           <Volume2 className="w-6 h-6 text-emerald-400" />
@@ -583,7 +622,9 @@ function ScrollIndicator({ progress }: { progress: number }) {
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: 2, type: "spring" }}
     >
-      <div className="w-2 h-48 bg-white/20 dark:bg-gray-800/20 rounded-full overflow-hidden backdrop-blur-sm border border-pink-200/30 dark:border-gray-700/30">
+      <div className="w-2 h-64 bg-white/20 dark:bg-gray-800/20 rounded-full overflow-hidden backdrop-blur-sm border border-pink-200/30 dark:border-gray-700/30">
+        {" "}
+        {/* Increased height to h-64 */}
         <motion.div
           className={`w-full bg-gradient-to-t ${stages[Math.min(currentStage, stages.length - 1)]?.color} rounded-full origin-bottom`}
           style={{ height: `${progress * 100}%` }}
@@ -626,7 +667,7 @@ function TextOverlay({ scrollProgress }: { scrollProgress: number }) {
       className="fixed inset-0 flex items-center justify-center pointer-events-none z-30"
       initial={{ opacity: 0 }}
       animate={{ opacity: scrollProgress > 0.85 ? 0 : 1 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: 0.8, ease: "easeOut" }} // Slower fade
       key={currentMessage.text}
     >
       <div className="text-center max-w-3xl px-6">
@@ -634,7 +675,7 @@ function TextOverlay({ scrollProgress }: { scrollProgress: number }) {
           className="text-4xl md:text-6xl font-light text-gray-800 dark:text-gray-100 mb-6 leading-tight"
           initial={{ opacity: 0, y: 40, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+          transition={{ duration: 1.2, ease: "easeOut" }} // Slower animation
           style={{
             textShadow: "0 4px 20px rgba(0,0,0,0.1)",
           }}
@@ -645,7 +686,7 @@ function TextOverlay({ scrollProgress }: { scrollProgress: number }) {
           className="text-lg md:text-xl text-gray-600 dark:text-gray-300 leading-relaxed"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+          transition={{ duration: 1.2, delay: 0.4, ease: "easeOut" }} // Slower animation
         >
           {currentMessage.subtext}
         </motion.p>
@@ -663,7 +704,7 @@ function FinalCTA({ visible }: { visible: boolean }) {
       className="fixed inset-0 flex items-center justify-center z-40 pointer-events-none"
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: 0.5, duration: 1, ease: "easeOut" }}
+      transition={{ delay: 0.8, duration: 1.2, ease: "easeOut" }} // Slower fade in
     >
       <div className="text-center max-w-2xl px-6">
         <motion.div
@@ -673,7 +714,7 @@ function FinalCTA({ visible }: { visible: boolean }) {
             opacity: [0.8, 1, 0.8],
           }}
           transition={{
-            duration: 4,
+            duration: 5, // Slower pulse
             repeat: Number.POSITIVE_INFINITY,
             ease: "easeInOut",
           }}
@@ -687,7 +728,7 @@ function FinalCTA({ visible }: { visible: boolean }) {
           className="text-3xl md:text-5xl font-light text-gray-800 dark:text-gray-100 mb-6 leading-tight"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1, duration: 0.8 }}
+          transition={{ delay: 1.5, duration: 1 }} // Slower animation
         >
           Welcome to your calm core
         </motion.h2>
@@ -696,7 +737,7 @@ function FinalCTA({ visible }: { visible: boolean }) {
           className="text-lg text-gray-600 dark:text-gray-300 mb-8 leading-relaxed"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.3, duration: 0.8 }}
+          transition={{ delay: 1.8, duration: 1 }} // Slower animation
         >
           You have journeyed through the layers of your mind.
           <br />
@@ -709,7 +750,7 @@ function FinalCTA({ visible }: { visible: boolean }) {
           whileTap={{ scale: 0.98 }}
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.6, duration: 0.8, type: "spring" }}
+          transition={{ delay: 2.1, duration: 1, type: "spring", stiffness: 100, damping: 15 }} // Slower spring
         >
           Begin Your Healing Journey
         </motion.button>
@@ -731,12 +772,12 @@ function LoadingScreen() {
         <motion.div
           className="w-20 h-20 mx-auto mb-6 rounded-full border-2 border-white/20 border-t-white/80"
           animate={{ rotate: 360 }}
-          transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+          transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, ease: "linear" }} // Slower rotation
         />
         <motion.p
           className="text-white/90 text-lg font-light"
           animate={{ opacity: [0.5, 1, 0.5] }}
-          transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
+          transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY }} // Slower pulse
         >
           Entering the temple of your mind...
         </motion.p>
@@ -760,7 +801,7 @@ function useScrollProgress() {
 
     // Smooth scroll progress with RAF
     const updateSmoothProgress = () => {
-      smoothProgress.current = lerp(smoothProgress.current, scrollProgress, 0.1)
+      smoothProgress.current = lerp(smoothProgress.current, scrollProgress, 0.08) // Slower smoothing factor
       requestAnimationFrame(updateSmoothProgress)
     }
     updateSmoothProgress()
